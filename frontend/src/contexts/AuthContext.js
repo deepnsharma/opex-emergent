@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authAPI } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -18,26 +19,51 @@ const AuthProvider = ({ children }) => {
     // Check for existing session
     const savedUser = localStorage.getItem('opex_user');
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      try {
+        const userData = JSON.parse(savedUser);
+        setUser(userData);
+      } catch (error) {
+        console.error('Error parsing saved user data:', error);
+        localStorage.removeItem('opex_user');
+      }
     }
     setLoading(false);
   }, []);
 
   const login = async (email, password) => {
-    // Mock login - in real app, this would call your backend
-    if (email && password) {
-      const mockUser = {
-        id: '1',
-        email,
-        name: email.split('@')[0],
-        role: 'TSD',
-        site: 'Manufacturing Plant A',
-      };
-      setUser(mockUser);
-      localStorage.setItem('opex_user', JSON.stringify(mockUser));
-      return { success: true };
+    try {
+      const result = await authAPI.login(email, password);
+      
+      if (result.success) {
+        const userData = {
+          id: result.data.id,
+          email: result.data.email,
+          name: result.data.name,
+          role: result.data.role,
+          site: result.data.site,
+          token: result.data.token
+        };
+        
+        setUser(userData);
+        localStorage.setItem('opex_user', JSON.stringify(userData));
+        return { success: true };
+      } else {
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      return { success: false, error: 'Login failed. Please try again.' };
     }
-    return { success: false, error: 'Invalid credentials' };
+  };
+
+  const register = async (userData) => {
+    try {
+      const result = await authAPI.register(userData);
+      return result;
+    } catch (error) {
+      console.error('Registration error:', error);
+      return { success: false, error: 'Registration failed. Please try again.' };
+    }
   };
 
   const logout = () => {
@@ -48,6 +74,7 @@ const AuthProvider = ({ children }) => {
   const value = {
     user,
     login,
+    register,
     logout,
     loading,
   };
