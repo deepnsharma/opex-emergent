@@ -1,4 +1,4 @@
 #!/bin/bash
 cd /app/backend
-./mvnw clean install -DskipTests
-./mvnw spring-boot:run
+mvn clean install -DskipTests
+mvn spring-boot:run
